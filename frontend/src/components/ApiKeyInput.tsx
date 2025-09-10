@@ -69,7 +69,7 @@ export default function ApiKeyInput({ onSubmit }: ApiKeyInputProps) {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
-            Don't have an API key?{' '}
+            Don&apos;t have an API key?{' '}
             <a
               href="https://platform.openai.com/api-keys"
               target="_blank"
