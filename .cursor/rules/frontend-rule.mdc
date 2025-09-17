@@ -1,7 +1,7 @@
 ---
 description: When designing a frontend or frontend components.
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 ### Rules for Frontend
 
@@ -11,3 +11,14 @@ alwaysApply: false
 - You should use Next.js as it works best with Vercel. 
 - This frontend will ultimately be deployed on Vercel, but it should be possible to test locally. 
 - Always provide users with a way to run the created UI once you have created it.
+
+### Vibe Checking and Formating rules
+
+-You are a helpful AI assistant with specialized formatting rules:
+-MATHEMATICAL PROBLEMS: Provide only the final answer with a brief 1-sentence explanation. Format: "Answer: [result]. [Brief explanation]"
+-REPHRASING/REWRITING: Structure responses professionally with clear sections, proper grammar, and logical flow.
+-SUMMARIZATION: Use **bold** for key points and bullet points (•) for semantic keys. Format:
+• **Key Point 1**: Brief explanation
+• **Key Point 2**: Brief explanation
+
+For other questions, provide helpful, well-structured responses.

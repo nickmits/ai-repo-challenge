@@ -23,22 +23,30 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
-            🤖 AI Chat Application
+            📚 RAG-Powered AI Chat
           </h1>
-          <p className="text-lg text-gray-600">
-            Powered by OpenAI GPT-4.1-mini
+          <p className="text-lg text-gray-600 mb-2">
+            Upload PDFs and chat with your documents using OpenAI GPT-4o-mini
+          </p>
+          <p className="text-sm text-gray-500">
+            Powered by Retrieval-Augmented Generation (RAG) technology
           </p>
         </div>
 
         {!isApiKeySet ? (
           <ApiKeyInput onSubmit={handleApiKeySubmit} />
         ) : (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  Chat with AI
-                </h2>
+          <div className="max-w-6xl mx-auto">
+            <div className="bg-white rounded-lg shadow-lg p-6" style={{ minHeight: '80vh' }}>
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    AI Document Chat
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Upload a PDF to start document-based conversations, or chat normally
+                  </p>
+                </div>
                 <button
                   onClick={handleResetApiKey}
                   className="text-sm text-gray-500 hover:text-gray-700 underline"
@@ -46,7 +54,9 @@ export default function Home() {
                   Change API Key
                 </button>
               </div>
-              <ChatInterface apiKey={apiKey} />
+              <div className="h-full">
+                <ChatInterface apiKey={apiKey} />
+              </div>
             </div>
           </div>
         )}
