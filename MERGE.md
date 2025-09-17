@@ -182,4 +182,28 @@ Once merged, users will be able to:
 - Choose between OpenAI and Together AI models
 - Enjoy a persistent, RAG-powered chat experience
 
-Happy merging! 🚀
+Happy merging! ��
+
+```
+
+Based on the error you're seeing, the issue is that your PDF file exceeds Vercel's built-in size limits. Here's a comprehensive solution:
+
+## **Root Cause**
+Vercel has request body size limits:
+- **Hobby Plan**: 4.5MB maximum
+- **Pro Plan**: 50MB maximum
+
+## **Solution Summary**
+I need to implement file size validation and better error handling. The solution includes:
+
+1. **Frontend validation** - Check file size before upload
+2. **Backend validation** - Double-check file size with clear error messages  
+3. **Vercel configuration** - Optimize function settings
+4. **User guidance** - Clear error messages explaining limits and solutions
+
+**Immediate workarounds for you:**
+1. **Compress your PDF** - Try reducing the file size to under 4MB
+2. **Split large PDFs** - Break large documents into smaller sections
+3. **Use online PDF compressors** - Tools like SmallPDF can reduce file size
+
+**Would you like me to implement the complete fix with file size validation, or do you need help comp

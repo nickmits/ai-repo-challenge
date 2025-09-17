@@ -137,6 +137,20 @@ For other questions, provide helpful, well-structured responses.`
       return
     }
 
+    // Check file size (4MB limit for Vercel Hobby plan)
+    const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB in bytes
+    if (file.size > MAX_FILE_SIZE) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2)
+      const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(2)
+      alert(`File too large (${sizeMB}MB). Maximum allowed size is ${maxSizeMB}MB. Please use a smaller PDF file or upgrade to Vercel Pro for larger file support.`)
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+      return
+    }
+
     setIsUploadingPDF(true)
 
     try {

@@ -37,6 +37,10 @@ app.add_middleware(
 vector_database: Optional[VectorDatabase] = None
 pdf_context: Optional[str] = None
 
+# File size limits (in bytes)
+MAX_FILE_SIZE = 4 * 1024 * 1024  # 4MB for Vercel Hobby plan
+MAX_FILE_SIZE_PRO = 50 * 1024 * 1024  # 50MB for Vercel Pro plan
+
 # Define the data model for chat requests using Pydantic
 class ChatRequest(BaseModel):
     developer_message: str  # Message from the developer/system
@@ -70,9 +74,29 @@ async def upload_pdf(
         if not file.filename or not file.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Only PDF files are allowed")
         
+        # Check file size before reading content
+        if file.size and file.size > MAX_FILE_SIZE:
+            size_mb = round(file.size / (1024 * 1024), 2)
+            max_size_mb = round(MAX_FILE_SIZE / (1024 * 1024), 2)
+            raise HTTPException(
+                status_code=413, 
+                detail=f"File too large ({size_mb}MB). Maximum allowed size is {max_size_mb}MB. Please use a smaller PDF file or upgrade to Vercel Pro for larger file support."
+            )
+        
+        # Read file content with size validation
+        content = await file.read()
+        content_size = len(content)
+        
+        if content_size > MAX_FILE_SIZE:
+            size_mb = round(content_size / (1024 * 1024), 2)
+            max_size_mb = round(MAX_FILE_SIZE / (1024 * 1024), 2)
+            raise HTTPException(
+                status_code=413, 
+                detail=f"File too large ({size_mb}MB). Maximum allowed size is {max_size_mb}MB. Please use a smaller PDF file or upgrade to Vercel Pro for larger file support."
+            )
+        
         # Create a temporary file to store the uploaded PDF
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
-            content = await file.read()
             temp_file.write(content)
             temp_file_path = temp_file.name
         
@@ -103,9 +127,10 @@ async def upload_pdf(
             vector_database = VectorDatabase(embedding_model=embedding_model)
             vector_database = await vector_database.abuild_from_list(chunks)
             
+            size_mb = round(content_size / (1024 * 1024), 2)
             return PDFUploadResponse(
                 success=True,
-                message=f"PDF processed successfully. Extracted {len(chunks)} text chunks.",
+                message=f"PDF processed successfully ({size_mb}MB). Extracted {len(chunks)} text chunks.",
                 chunks_count=len(chunks)
             )
             
