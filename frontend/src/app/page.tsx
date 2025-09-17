@@ -26,10 +26,10 @@ export default function Home() {
             📚 RAG-Powered AI Chat
           </h1>
           <p className="text-lg text-gray-600 mb-2">
-            Upload PDFs and chat with your documents using OpenAI GPT-4o-mini
+            Upload PDFs and chat with your documents using OpenAI or Together AI
           </p>
           <p className="text-sm text-gray-500">
-            Powered by Retrieval-Augmented Generation (RAG) technology
+            Powered by Retrieval-Augmented Generation (RAG) technology with multi-provider support
           </p>
         </div>
 

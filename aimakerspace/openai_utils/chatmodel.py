@@ -1,5 +1,5 @@
 import os
-from typing import Any, AsyncIterator, Iterable, List, MutableMapping
+from typing import Any, AsyncIterator, Iterable, List, MutableMapping, Optional, Literal
 
 from dotenv import load_dotenv
 from openai import AsyncOpenAI, OpenAI
@@ -7,19 +7,50 @@ from openai import AsyncOpenAI, OpenAI
 load_dotenv()
 
 ChatMessage = MutableMapping[str, Any]
+APIProvider = Literal["openai", "together"]
 
 
 class ChatOpenAI:
-    """Thin wrapper around the OpenAI chat completion APIs."""
+    """Enhanced wrapper around OpenAI and Together AI chat completion APIs."""
 
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(
+        self, 
+        model_name: str = "gpt-4o-mini",
+        api_provider: APIProvider = "openai",
+        api_key: Optional[str] = None
+    ):
         self.model_name = model_name
-        self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        if self.openai_api_key is None:
-            raise ValueError("OPENAI_API_KEY is not set")
-
-        self._client = OpenAI()
-        self._async_client = AsyncOpenAI()
+        self.api_provider = api_provider
+        
+        if api_provider == "openai":
+            self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+            if self.api_key is None:
+                raise ValueError("OPENAI_API_KEY is not set")
+            self._client = OpenAI(api_key=self.api_key)
+            self._async_client = AsyncOpenAI(api_key=self.api_key)
+            
+        elif api_provider == "together":
+            # Import together here to make it optional
+            try:
+                import together
+            except ImportError:
+                raise ImportError("together package is required for Together AI. Install with: pip install together")
+            
+            self.api_key = api_key or os.getenv("TOGETHER_API_KEY")
+            if self.api_key is None:
+                raise ValueError("TOGETHER_API_KEY is not set")
+            
+            # Together AI uses OpenAI-compatible client
+            self._client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://api.together.xyz/v1"
+            )
+            self._async_client = AsyncOpenAI(
+                api_key=self.api_key,
+                base_url="https://api.together.xyz/v1"
+            )
+        else:
+            raise ValueError(f"Unsupported API provider: {api_provider}")
 
     def run(
         self,
@@ -64,3 +95,36 @@ class ChatOpenAI:
         if isinstance(messages, list):
             return messages
         return list(messages)
+    
+    @classmethod
+    def get_available_models(cls, api_provider: APIProvider = "openai") -> List[str]:
+        """Get list of available models for the specified provider."""
+        if api_provider == "openai":
+            return [
+                "gpt-4o-mini",
+                "gpt-4o",
+                "gpt-4-turbo",
+                "gpt-4",
+                "gpt-3.5-turbo"
+            ]
+        elif api_provider == "together":
+            return [
+                "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+                "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+                "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+                "mistralai/Mixtral-8x7B-Instruct-v0.1",
+                "mistralai/Mixtral-8x22B-Instruct-v0.1",
+                "NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO",
+                "Qwen/Qwen2-72B-Instruct",
+                "microsoft/DialoGPT-medium"
+            ]
+        else:
+            raise ValueError(f"Unsupported API provider: {api_provider}")
+    
+    def get_provider_info(self) -> dict:
+        """Get information about the current API provider and model."""
+        return {
+            "provider": self.api_provider,
+            "model": self.model_name,
+            "base_url": getattr(self._client, "base_url", "https://api.openai.com/v1") if hasattr(self._client, "base_url") else "https://api.openai.com/v1"
+        }

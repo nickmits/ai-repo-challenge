@@ -18,12 +18,23 @@ interface PDFStatus {
   chunks_count: number
 }
 
+interface AvailableModels {
+  openai: string[]
+  together: string[]
+}
+
 export default function ChatInterface({ apiKey }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingPDF, setIsUploadingPDF] = useState(false)
   const [pdfStatus, setPdfStatus] = useState<PDFStatus>({ pdf_uploaded: false, chunks_count: 0 })
+  const [apiProvider, setApiProvider] = useState<'openai' | 'together'>('openai')
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
+  const [availableModels, setAvailableModels] = useState<AvailableModels>({ 
+    openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'], 
+    together: ['meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', 'mistralai/Mixtral-8x7B-Instruct-v0.1'] 
+  })
   
   const developerMessage = `You are a helpful AI assistant with specialized formatting rules.
 
@@ -51,9 +62,59 @@ For other questions, provide helpful, well-structured responses.`
   }, [messages])
 
   useEffect(() => {
-    // Check PDF status on component mount
+    // Check PDF status and load available models on component mount
     checkPdfStatus()
+    loadAvailableModels()
   }, [])
+
+  const loadAvailableModels = async () => {
+    try {
+      const response = await fetch('/api/models')
+      if (response.ok) {
+        const models = await response.json()
+        console.log('Loaded models:', models)
+        setAvailableModels(models)
+        
+        // Set default model for current provider if not already set
+        if (apiProvider === 'openai' && models.openai?.length > 0) {
+          setSelectedModel(models.openai[0])
+        } else if (apiProvider === 'together' && models.together?.length > 0) {
+          setSelectedModel(models.together[0])
+        }
+      }
+    } catch (error) {
+      console.error('Error loading available models:', error)
+      // Set default models if fetch fails
+      const defaultModels = {
+        openai: ['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+        together: ['meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo', 'mistralai/Mixtral-8x7B-Instruct-v0.1']
+      }
+      console.log('Using default models:', defaultModels)
+      setAvailableModels(defaultModels)
+      
+      // Set default model
+      if (apiProvider === 'openai') {
+        setSelectedModel(defaultModels.openai[0])
+      } else {
+        setSelectedModel(defaultModels.together[0])
+      }
+    }
+  }
+
+  // Update selected model when provider changes
+  useEffect(() => {
+    if (apiProvider === 'openai' && availableModels.openai.length > 0) {
+      // Only change if current model is not available for OpenAI
+      if (!availableModels.openai.includes(selectedModel)) {
+        setSelectedModel(availableModels.openai[0])
+      }
+    } else if (apiProvider === 'together' && availableModels.together.length > 0) {
+      // Only change if current model is not available for Together
+      if (!availableModels.together.includes(selectedModel)) {
+        setSelectedModel(availableModels.together[0])
+      }
+    }
+  }, [apiProvider, availableModels, selectedModel])
 
   const checkPdfStatus = async () => {
     try {
@@ -82,6 +143,7 @@ For other questions, provide helpful, well-structured responses.`
       const formData = new FormData()
       formData.append('file', file)
       formData.append('api_key', apiKey)
+      formData.append('api_provider', apiProvider)
 
       const response = await fetch('/api/upload-pdf', {
         method: 'POST',
@@ -164,8 +226,9 @@ For other questions, provide helpful, well-structured responses.`
         body: JSON.stringify({
           developer_message: developerMessage,
           user_message: inputMessage,
-          model: 'gpt-4o-mini',
-          api_key: apiKey
+          model: selectedModel,
+          api_key: apiKey,
+          api_provider: apiProvider
         })
       })
 
@@ -272,6 +335,80 @@ For other questions, provide helpful, well-structured responses.`
             Upload a PDF to enable RAG-powered Q&A. The AI will only answer questions using information from your document.
           </p>
         )}
+      </div>
+
+      {/* API Provider and Model Selection */}
+      <div className="mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-800 mb-3">AI Configuration</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* API Provider Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              API Provider
+            </label>
+            <select
+              value={apiProvider}
+              onChange={(e) => {
+                const newProvider = e.target.value as 'openai' | 'together'
+                console.log('Provider changed to:', newProvider)
+                setApiProvider(newProvider)
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
+              disabled={isLoading || isUploadingPDF}
+            >
+              <option value="openai">OpenAI</option>
+              <option value="together">Together AI</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {apiProvider === 'openai' 
+                ? 'Use OpenAI\'s GPT models (requires OpenAI API key)'
+                : 'Use Together AI\'s open-source models (requires Together API key)'
+              }
+            </p>
+          </div>
+
+          {/* Model Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Model
+            </label>
+            <select
+              value={selectedModel}
+              onChange={(e) => {
+                console.log('Model changed to:', e.target.value)
+                setSelectedModel(e.target.value)
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-gray-900"
+              disabled={isLoading || isUploadingPDF}
+            >
+              {availableModels[apiProvider]?.length > 0 ? (
+                availableModels[apiProvider].map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Loading models...</option>
+              )}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Currently using: <span className="font-mono">{selectedModel}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* API Key Info */}
+        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm text-blue-800">
+            <strong>API Key Required:</strong> {apiProvider === 'openai' ? 'OpenAI' : 'Together AI'} API key
+            {apiProvider === 'together' && (
+              <span className="block mt-1">
+                Get your Together API key at <a href="https://api.together.xyz" target="_blank" rel="noopener noreferrer" className="underline">api.together.xyz</a>
+              </span>
+            )}
+          </p>
+        </div>
       </div>
 
       {/* Messages */}

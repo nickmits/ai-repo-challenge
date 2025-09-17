@@ -42,7 +42,8 @@ class ChatRequest(BaseModel):
     developer_message: str  # Message from the developer/system
     user_message: str      # Message from the user
     model: Optional[str] = "gpt-4o-mini"  # Optional model selection with default
-    api_key: str          # OpenAI API key for authentication
+    api_key: str          # API key for authentication
+    api_provider: Optional[str] = "openai"  # API provider: "openai" or "together"
 
 # Define response model for PDF upload
 class PDFUploadResponse(BaseModel):
@@ -52,7 +53,11 @@ class PDFUploadResponse(BaseModel):
 
 # Endpoint for uploading and processing PDF files
 @app.post("/api/upload-pdf", response_model=PDFUploadResponse)
-async def upload_pdf(file: UploadFile = File(...), api_key: str = Form(...)):
+async def upload_pdf(
+    file: UploadFile = File(...), 
+    api_key: str = Form(...),
+    api_provider: str = Form("openai")
+):
     """Upload and process a PDF file for RAG functionality."""
     global vector_database, pdf_context
     
@@ -119,8 +124,18 @@ async def chat(request: ChatRequest):
     global vector_database, pdf_context
     
     try:
-        # Initialize OpenAI client with the provided API key
-        client = OpenAI(api_key=request.api_key)
+        # Validate API provider
+        if request.api_provider not in ["openai", "together"]:
+            raise HTTPException(status_code=400, detail="Invalid API provider. Must be 'openai' or 'together'")
+        
+        # Initialize the appropriate client based on provider
+        if request.api_provider == "openai":
+            client = OpenAI(api_key=request.api_key)
+        else:  # together
+            client = OpenAI(
+                api_key=request.api_key,
+                base_url="https://api.together.xyz/v1"
+            )
         
         # Prepare the user message with context if available
         enhanced_user_message = request.user_message
@@ -193,6 +208,23 @@ async def clear_pdf():
     pdf_context = None
     
     return {"success": True, "message": "PDF cleared successfully"}
+
+# Endpoint to get available models for each provider
+@app.get("/api/models")
+async def get_available_models():
+    """Get available models for each API provider."""
+    try:
+        from aimakerspace.openai_utils.chatmodel import ChatOpenAI
+        return {
+            "openai": ChatOpenAI.get_available_models("openai"),
+            "together": ChatOpenAI.get_available_models("together")
+        }
+    except Exception as e:
+        return {
+            "openai": ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+            "together": ["meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "mistralai/Mixtral-8x7B-Instruct-v0.1"],
+            "error": str(e)
+        }
 
 # Define a health check endpoint to verify API status
 @app.get("/api/health")
